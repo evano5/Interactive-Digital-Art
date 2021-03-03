@@ -1,0 +1,160 @@
+import ddf.minim.*;
+import ddf.minim.analysis.*;
+import ch.bildspur.postfx.builder.*;
+import ch.bildspur.postfx.pass.*;
+import ch.bildspur.postfx.*;
+
+PostFX fx;
+Minim minim;
+AudioPlayer song;
+BeatDetect beat;
+BeatListener bl;
+
+float kickSize, snareSize, hatSize;
+
+class BeatListener implements AudioListener
+{
+  private BeatDetect beat;
+  private AudioPlayer source;
+
+  BeatListener(BeatDetect beat, AudioPlayer source)
+  {
+    this.source = source;
+    this.source.addListener(this);
+    this.beat = beat;
+  }
+
+  void samples(float[] samps)
+  {
+    beat.detect(source.mix);
+  }
+
+  void samples(float[] sampsL, float[] sampsR)
+  {
+    beat.detect(source.mix);
+  }
+}
+int detail=0;
+int hue= 0;
+void setup()
+{
+  noCursor();
+  fullScreen(P3D);
+  fx = new PostFX(this);
+  minim = new Minim(this);
+
+  song = minim.loadFile("Window.mp3", 1024);
+  
+  
+  
+  beat = new BeatDetect(song.bufferSize(), song.sampleRate());
+  beat.setSensitivity(300);  
+  kickSize = snareSize = hatSize = 16;
+  bl = new BeatListener(beat, song);  
+  textFont(createFont("Helvetica", 16));
+  textAlign(CENTER);
+}
+
+void draw()
+{
+  emissive(150);
+  background(0);
+  textSize(32);
+  fill(random(200), random(255), random(200));
+  text("W i n d o w l i c k e r", 300, 500);
+  emissive(150);
+  noFill();
+  directionalLight(50, 50, 30, .5, 0, -1);
+  stroke(random(255), random(255), random(255), 25);
+  translate(width/2, height/2.5, -800);
+  rotateX(radians(frameCount % 360));
+  rotateZ(radians(frameCount % 360));
+
+  +
+  
+  sphereDetail(detail);
+  sphere(2000);
+
+  float xLoc = random(width/3);
+  float yLoc = random(height/3);
+  float rectW = width / beat.detectSize();
+  for (int i = 0; i < beat.detectSize(); ++i)
+  {
+
+    if ( beat.isOnset(i) )
+    {
+      stroke(random(255), 0, 100);
+      noFill();
+      translate(xLoc, yLoc);
+      sphereDetail(mouseX/20);
+      rotateX(radians(frameCount % 360));
+      rotateZ(radians(frameCount % 360));
+      stroke(random(100), random(255), rectW*2);
+      sphere(i*rectW/2.5);
+      translate(width/2, height/2);
+      box(i*rectW/2, i*rectW/2, i*rectW/2);
+    }
+  }
+
+  int lowBand = 5;
+  int highBand = 15;
+  int numberOfOnsetsThreshold = 4;
+  if ( beat.isRange(lowBand, highBand, numberOfOnsetsThreshold) )
+  {
+    fill(232, 179, 2, 200);
+    
+  }
+
+  if ( beat.isKick())
+  {
+    kickSize =20;
+    detail = 10;
+    hue = 10;
+    strokeWeight(2);
+    stroke((255), random(255), 100 );
+    noFill();
+    translate(xLoc, yLoc);
+    sphereDetail(mouseX/10);
+    rotate(PI/detail*frameCount);
+    sphere(kickSize*2);
+  } 
+  if ( beat.isSnare())
+  {
+    snareSize = 50;
+    detail = 15;
+    hue = 30;
+    strokeWeight(3);
+    stroke(0, (255), random(255));
+    noFill();
+    translate(xLoc, yLoc);
+    sphereDetail(mouseX/10);
+    rotate(PI/detail*frameCount);
+    sphere(snareSize*5);
+  } 
+  if ( beat.isHat())
+  {
+    hatSize = 90;
+    detail = 30;
+    hue = 60;
+    strokeWeight(1);
+    stroke(0, (255), (255));
+    noFill();
+    translate(random(255), random(255));
+    sphere(hatSize*5);
+    box( random(255), random(255), random(255));
+  }
+
+  fx.render()
+    .sobel()
+    .bloom(0.5, 20, 30)
+    .compose();
+
+
+
+  kickSize = constrain(kickSize * 0.95, 16, 32);
+  snareSize = constrain(snareSize * 0.95, 16, 32);
+  hatSize = constrain(hatSize * 0.95, 16, 32);
+}
+void keyPressed(){
+  song.play();
+  }
